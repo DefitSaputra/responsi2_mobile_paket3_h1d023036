@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../config/theme.dart';
@@ -6,8 +5,8 @@ import '../../models/book_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/book_service.dart';
 import '../../widgets/book_card.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/loading_indicator.dart';
+import '../../widgets/loading_indicator.dart' hide EmptyState;
+import '../../widgets/empty_state.dart';
 import '../../utils/helpers.dart';
 import '../../utils/constants.dart';
 import '../auth/login_screen.dart';
@@ -26,70 +25,23 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final BookService _bookService = BookService();
   
-  List<Book> _books = [];
-  List<Book> _filteredBooks = [];
-  bool _isLoading = true;
+  // Stream untuk mendengarkan perubahan data secara langsung
+  late Stream<List<Book>> _booksStream;
   String _searchQuery = '';
   
-  // Statistics
-  int _totalBooks = 0;
-  int _totalStock = 0;
-  int _totalValue = 0;
-
   @override
   void initState() {
     super.initState();
-    _loadBooks();
-    _loadStatistics();
-  }
-
-  Future<void> _loadBooks() async {
-    setState(() => _isLoading = true);
-    
-    final result = await _bookService.getAllBooks();
-    
-    if (result['success']) {
-      setState(() {
-        _books = result['data'];
-        _filteredBooks = _books;
-        _isLoading = false;
-      });
-    } else {
-      setState(() => _isLoading = false);
-      Get.snackbar(
-        'Error',
-        result['message'],
-        backgroundColor: AppColors.error,
-        colorText: AppColors.white,
-        snackPosition: SnackPosition.TOP,
-      );
-    }
-  }
-
-  Future<void> _loadStatistics() async {
-    final totalBooks = await _bookService.getTotalBooks();
-    final totalStock = await _bookService.getTotalStock();
-    final totalValue = await _bookService.getTotalValue();
-    
-    setState(() {
-      _totalBooks = totalBooks;
-      _totalStock = totalStock;
-      _totalValue = totalValue;
-    });
+    // Inisialisasi stream satu kali saat halaman dibuka
+    // Pastikan getBooksStream sudah ada di BookService
+    _booksStream = _bookService.getBooksStream();
   }
 
   void _searchBooks(String query) {
     setState(() {
       _searchQuery = query;
-      if (query.isEmpty) {
-        _filteredBooks = _books;
-      } else {
-        _filteredBooks = _books.where((book) {
-          return book.judul.toLowerCase().contains(query.toLowerCase()) ||
-                 book.penulis.toLowerCase().contains(query.toLowerCase()) ||
-                 book.penerbit.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-      }
+      // Tidak perlu panggil fungsi filter manual, 
+      // setState akan memicu build ulang dan StreamBuilder akan memfilter ulang datanya
     });
   }
 
@@ -115,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirm == true) {
+      // Tidak perlu loading indicator full screen karena stream akan update UI otomatis
+      // Feedback cukup dengan snackbar
       final result = await _bookService.deleteBook(book.id!);
       
       if (result['success']) {
@@ -125,8 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
           colorText: AppColors.white,
           snackPosition: SnackPosition.TOP,
         );
-        _loadBooks();
-        _loadStatistics();
+        // TIDAK PERLU _refreshData(), Stream otomatis update
       } else {
         Get.snackbar(
           'Error',
@@ -179,131 +132,165 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadBooks();
-          await _loadStatistics();
-        },
-        child: _isLoading
-            ? const LoadingIndicator(message: 'Memuat data buku...')
-            : Column(
-                children: [
-                  // Statistics Card
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary,
-                          AppColors.primaryLight,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatItem(
-                          icon: Icons.library_books,
-                          label: 'Total Buku',
-                          value: '$_totalBooks',
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: AppColors.white.withOpacity(0.3),
-                        ),
-                        _buildStatItem(
-                          icon: Icons.inventory_2,
-                          label: 'Total Stok',
-                          value: '$_totalStock',
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: AppColors.white.withOpacity(0.3),
-                        ),
-                        _buildStatItem(
-                          icon: Icons.attach_money,
-                          label: 'Total Nilai',
-                          value: Helpers.formatCurrency(_totalValue),
-                          isSmall: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Search Bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextField(
-                      onChanged: _searchBooks,
-                      decoration: InputDecoration(
-                        hintText: 'Cari buku, penulis, atau penerbit...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () => _searchBooks(''),
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Book List
-                  Expanded(
-                    child: _filteredBooks.isEmpty
-                        ? EmptyState(
-                            icon: Icons.menu_book_outlined,
-                            title: _searchQuery.isEmpty
-                                ? 'Belum Ada Buku'
-                                : 'Tidak Ditemukan',
-                            message: _searchQuery.isEmpty
-                                ? 'Tambahkan buku pertama Anda dengan menekan tombol + di bawah'
-                                : 'Tidak ada buku yang sesuai dengan pencarian "$_searchQuery"',
-                            onRefresh: _loadBooks,
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 80),
-                            itemCount: _filteredBooks.length,
-                            itemBuilder: (context, index) {
-                              final book = _filteredBooks[index];
-                              return BookCard(
-                                book: book,
-                                onTap: () async {
-                                  await Get.to(() => DetailBookScreen(book: book));
-                                  _loadBooks();
-                                  _loadStatistics();
-                                },
-                                onEdit: () async {
-                                  await Get.to(() => EditBookScreen(book: book));
-                                  _loadBooks();
-                                  _loadStatistics();
-                                },
-                                onDelete: () => _handleDelete(book),
-                              );
-                            },
-                          ),
-                  ),
-                ],
+      // ✅ Menggunakan StreamBuilder untuk Realtime Updates
+      body: StreamBuilder<List<Book>>(
+        stream: _booksStream,
+        builder: (context, snapshot) {
+          // 1. Handle Loading Awal
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: LoadingIndicator(message: 'Menghubungkan data...'));
+          }
+
+          // 2. Handle Error
+          if (snapshot.hasError) {
+            return Center(
+              child: EmptyState(
+                icon: Icons.error_outline,
+                title: 'Terjadi Kesalahan',
+                message: 'Gagal memuat data: ${snapshot.error}',
               ),
+            );
+          }
+
+          // 3. Ambil Data
+          final allBooks = snapshot.data ?? [];
+          
+          // Filter data berdasarkan search query
+          final filteredBooks = _searchQuery.isEmpty 
+              ? allBooks 
+              : allBooks.where((book) {
+                  final query = _searchQuery.toLowerCase();
+                  return book.judul.toLowerCase().contains(query) ||
+                         book.penulis.toLowerCase().contains(query) ||
+                         book.penerbit.toLowerCase().contains(query);
+                }).toList();
+
+          // 4. Hitung Statistik secara Realtime (Client Side Calculation)
+          // Ini lebih efisien daripada request terpisah ke DB
+          final totalBooks = allBooks.length;
+          final totalStock = allBooks.fold<int>(0, (sum, item) => sum + item.jumlah);
+          final totalValue = allBooks.fold<int>(0, (sum, item) => sum + (item.harga * item.jumlah));
+
+          return Column(
+            children: [
+              // Statistics Card (UI Tetap Sama)
+              if (allBooks.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primaryLight,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem(
+                      icon: Icons.library_books,
+                      label: 'Total Buku',
+                      value: '$totalBooks',
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: AppColors.white.withOpacity(0.3),
+                    ),
+                    _buildStatItem(
+                      icon: Icons.inventory_2,
+                      label: 'Total Stok',
+                      value: '$totalStock',
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: AppColors.white.withOpacity(0.3),
+                    ),
+                    _buildStatItem(
+                      icon: Icons.attach_money,
+                      label: 'Total Nilai',
+                      value: Helpers.formatCurrency(totalValue),
+                      isSmall: true,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  onChanged: _searchBooks,
+                  decoration: InputDecoration(
+                    hintText: 'Cari buku, penulis, atau penerbit...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchBooks('');
+                              FocusScope.of(context).unfocus();
+                            },
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Book List
+              Expanded(
+                child: filteredBooks.isEmpty
+                    ? EmptyState(
+                        icon: Icons.menu_book_outlined,
+                        title: _searchQuery.isEmpty
+                            ? 'Belum Ada Buku'
+                            : 'Tidak Ditemukan',
+                        message: _searchQuery.isEmpty
+                            ? 'Tambahkan buku pertama Anda dengan menekan tombol + di bawah'
+                            : 'Tidak ada buku yang sesuai dengan pencarian "$_searchQuery"',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+                        itemCount: filteredBooks.length,
+                        itemBuilder: (context, index) {
+                          final book = filteredBooks[index];
+                          return BookCard(
+                            book: book,
+                            onTap: () {
+                              // Navigasi ke Detail
+                              // Tidak perlu await result, karena data realtime
+                              Get.to(() => DetailBookScreen(book: book));
+                            },
+                            onEdit: () {
+                              // Navigasi ke Edit
+                              Get.to(() => EditBookScreen(book: book));
+                            },
+                            onDelete: () => _handleDelete(book),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Get.to(() => const AddBookScreen());
-          _loadBooks();
-          _loadStatistics();
+        onPressed: () {
+          // Navigasi ke Add Book
+          Get.to(() => const AddBookScreen());
         },
         icon: const Icon(Icons.add),
         label: const Text('Tambah Buku'),

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -53,7 +52,16 @@ class _AddBookScreenState extends State<AddBookScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDate() async {
+  // ✅ Wrapper untuk date picker (synchronous)
+  void _selectDate() {
+    if (_isLoading) return; // Prevent saat loading
+    
+    // Jalankan async operation tanpa await
+    _showDatePicker();
+  }
+  
+  // ✅ Actual async function
+  Future<void> _showDatePicker() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
@@ -85,36 +93,74 @@ class _AddBookScreenState extends State<AddBookScreen> {
     
     setState(() => _isLoading = true);
     
-    final book = Book(
-      judul: _judulController.text.trim(),
-      harga: int.parse(_hargaController.text.replaceAll('.', '')),
-      jumlah: int.parse(_jumlahController.text),
-      tanggalMasuk: _tanggalMasukController.text,
-      volume: int.parse(_volumeController.text),
-      penulis: _penulisController.text.trim(),
-      penerbit: _penerbitController.text.trim(),
-    );
-    
-    final result = await _bookService.createBook(book);
-    
-    setState(() => _isLoading = false);
-    
-    if (result['success']) {
-      Get.snackbar(
-        'Berhasil',
-        result['message'],
-        backgroundColor: AppColors.success,
-        colorText: AppColors.white,
-        snackPosition: SnackPosition.TOP,
+    try {
+      final book = Book(
+        judul: _judulController.text.trim(),
+        harga: int.parse(_hargaController.text.replaceAll('.', '')),
+        jumlah: int.parse(_jumlahController.text),
+        tanggalMasuk: _tanggalMasukController.text,
+        volume: int.parse(_volumeController.text),
+        penulis: _penulisController.text.trim(),
+        penerbit: _penerbitController.text.trim(),
       );
-      Get.back(result: true);
-    } else {
+      
+      final result = await _bookService.createBook(book);
+      
+      setState(() => _isLoading = false);
+      
+      if (result['success']) {
+        // ✅ SUCCESS: Show success snackbar with book title
+        Get.snackbar(
+          'Buku Berhasil Ditambahkan! ✅',
+          'Buku "${_judulController.text.trim()}" telah ditambahkan ke inventaris',
+          backgroundColor: AppColors.success,
+          colorText: AppColors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          icon: const Icon(Icons.check_circle, color: Colors.white),
+          duration: const Duration(seconds: 3),
+          isDismissible: true,
+          dismissDirection: DismissDirection.horizontal,
+        );
+        
+        // ✅ DELAY sebelum navigate agar user baca snackbar
+        await Future.delayed(const Duration(milliseconds: 1500));
+        
+        // ✅ Navigate back dengan result true
+        if (mounted) {
+          Get.back(result: true);
+        }
+      } else {
+        // ❌ ERROR: Show error snackbar
+        Get.snackbar(
+          'Gagal Menambahkan Buku ❌',
+          result['message'] ?? 'Terjadi kesalahan saat menambahkan buku',
+          backgroundColor: AppColors.error,
+          colorText: AppColors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          icon: const Icon(Icons.error_outline, color: Colors.white),
+          duration: const Duration(seconds: 4),
+          isDismissible: true,
+          dismissDirection: DismissDirection.horizontal,
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      
+      // ❌ CATCH ERROR
       Get.snackbar(
-        'Error',
-        result['message'],
+        'Error ❌',
+        'Terjadi kesalahan: ${e.toString()}',
         backgroundColor: AppColors.error,
         colorText: AppColors.white,
         snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        icon: const Icon(Icons.error_outline, color: Colors.white),
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -124,6 +170,13 @@ class _AddBookScreenState extends State<AddBookScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tambah Buku - Deef Books'),
+        // ✅ Disable back button saat loading
+        leading: _isLoading
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Get.back(),
+            ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -165,6 +218,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 label: 'Judul Buku',
                 hint: 'Masukkan judul buku',
                 prefixIcon: Icons.book,
+                enabled: !_isLoading, // ✅ Disable saat loading
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Judul buku');
@@ -181,6 +235,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 label: 'Penulis',
                 hint: 'Masukkan nama penulis',
                 prefixIcon: Icons.person,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Penulis');
@@ -197,6 +252,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 label: 'Penerbit',
                 hint: 'Masukkan nama penerbit',
                 prefixIcon: Icons.business,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Penerbit');
@@ -215,6 +271,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 prefixIcon: Icons.format_list_numbered,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Volume');
@@ -232,6 +289,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 hint: 'Masukkan harga',
                 prefixIcon: Icons.attach_money,
                 keyboardType: TextInputType.number,
+                enabled: !_isLoading,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   TextInputFormatter.withFunction((oldValue, newValue) {
@@ -264,6 +322,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 prefixIcon: Icons.inventory_2,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Jumlah stok');
@@ -286,6 +345,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 readOnly: true,
                 onTap: _selectDate,
                 suffixIcon: Icons.arrow_drop_down,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Tanggal masuk');
@@ -299,7 +359,12 @@ class _AddBookScreenState extends State<AddBookScreen> {
               // Submit Button
               CustomButton(
                 text: 'Simpan Buku',
-                onPressed: _handleSubmit,
+                // PERBAIKAN: Selalu kembalikan fungsi yang valid (tidak null).
+                // Cek _isLoading di dalam fungsi untuk mencegah eksekusi ganda.
+                onPressed: () {
+                  if (_isLoading) return;
+                  _handleSubmit();
+                }, 
                 isLoading: _isLoading,
                 icon: Icons.save,
               ),
@@ -309,7 +374,8 @@ class _AddBookScreenState extends State<AddBookScreen> {
               // Cancel Button
               CustomButton(
                 text: 'Batal',
-                onPressed: _isLoading ? () {} : () => Get.back(),
+                // Ini aman karena kedua cabang mengembalikan void Function()
+                onPressed: _isLoading ? () {} : () => Get.back(), 
                 isOutlined: true,
                 icon: Icons.close,
               ),

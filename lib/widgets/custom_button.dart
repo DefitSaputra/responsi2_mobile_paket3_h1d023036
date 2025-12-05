@@ -1,10 +1,10 @@
-
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  // ✅ UBAH: Jadi nullable (tanda tanya ?) agar bisa disabled dari luar
+  final VoidCallback? onPressed; 
   final bool isLoading;
   final bool isOutlined;
   final Color? backgroundColor;
@@ -17,7 +17,7 @@ class CustomButton extends StatelessWidget {
   const CustomButton({
     super.key,
     required this.text,
-    required this.onPressed,
+    required this.onPressed, // Tetap required, tapi isinya boleh null
     this.isLoading = false,
     this.isOutlined = false,
     this.backgroundColor,
@@ -30,16 +30,22 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ LOGIC: Jika loading, paksa null. Jika tidak, gunakan nilai asli (bisa fungsi, bisa null)
+    final effectiveOnPressed = isLoading ? null : onPressed;
+
     if (isOutlined) {
       return SizedBox(
         width: width ?? double.infinity,
         height: height,
         child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: effectiveOnPressed,
           style: OutlinedButton.styleFrom(
             foregroundColor: textColor ?? AppColors.primary,
             side: BorderSide(
-              color: textColor ?? AppColors.primary,
+              // Jika disabled (onPressed null), gunakan warna abu-abu default flutter atau grey
+              color: effectiveOnPressed == null 
+                  ? Colors.grey.shade400 
+                  : (textColor ?? AppColors.primary),
               width: 2,
             ),
             shape: RoundedRectangleBorder(
@@ -79,14 +85,18 @@ class CustomButton extends StatelessWidget {
       width: width ?? double.infinity,
       height: height,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: effectiveOnPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor ?? AppColors.primary,
           foregroundColor: textColor ?? AppColors.white,
+          // Handle disabled color secara otomatis oleh ElevatedButton, 
+          // atau custom disini jika perlu
+          disabledBackgroundColor: Colors.grey.shade300,
+          disabledForegroundColor: Colors.grey.shade600,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
-          elevation: 2,
+          elevation: effectiveOnPressed == null ? 0 : 2,
         ),
         child: isLoading
             ? const SizedBox(
@@ -121,7 +131,7 @@ class CustomButton extends StatelessWidget {
 // Icon Button dengan loading state
 class CustomIconButton extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // ✅ UBAH: Jadi nullable
   final Color? backgroundColor;
   final Color? iconColor;
   final double size;
@@ -139,17 +149,22 @@ class CustomIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveOnPressed = isLoading ? null : onPressed;
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.primary,
+        // Jika disabled, ganti warna background jadi abu-abu
+        color: effectiveOnPressed == null 
+            ? Colors.grey.shade300 
+            : (backgroundColor ?? AppColors.primary),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isLoading ? null : onPressed,
+          onTap: effectiveOnPressed,
           borderRadius: BorderRadius.circular(12),
           child: Center(
             child: isLoading
@@ -165,7 +180,10 @@ class CustomIconButton extends StatelessWidget {
                   )
                 : Icon(
                     icon,
-                    color: iconColor ?? AppColors.white,
+                    // Jika disabled, warna icon jadi agak pudar
+                    color: effectiveOnPressed == null 
+                        ? Colors.grey.shade500 
+                        : (iconColor ?? AppColors.white),
                     size: size * 0.5,
                   ),
           ),

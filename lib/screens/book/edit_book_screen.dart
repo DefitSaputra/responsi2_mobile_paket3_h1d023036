@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -10,6 +9,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
+// import 'detail_book_screen.dart'; // ❌ Tidak perlu import ini lagi karena kita cuma akan Get.back()
 
 class EditBookScreen extends StatefulWidget {
   final Book book;
@@ -68,7 +68,13 @@ class _EditBookScreenState extends State<EditBookScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDate() async {
+  // ✅ Wrapper untuk date picker
+  void _selectDate() {
+    if (_isLoading) return; 
+    _showDatePicker();
+  }
+  
+  Future<void> _showDatePicker() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
@@ -100,37 +106,69 @@ class _EditBookScreenState extends State<EditBookScreen> {
     
     setState(() => _isLoading = true);
     
-    final updatedBook = Book(
-      id: widget.book.id,
-      judul: _judulController.text.trim(),
-      harga: int.parse(_hargaController.text.replaceAll('.', '')),
-      jumlah: int.parse(_jumlahController.text),
-      tanggalMasuk: _tanggalMasukController.text,
-      volume: int.parse(_volumeController.text),
-      penulis: _penulisController.text.trim(),
-      penerbit: _penerbitController.text.trim(),
-    );
-    
-    final result = await _bookService.updateBook(widget.book.id!, updatedBook);
-    
-    setState(() => _isLoading = false);
-    
-    if (result['success']) {
-      Get.snackbar(
-        'Berhasil',
-        result['message'],
-        backgroundColor: AppColors.success,
-        colorText: AppColors.white,
-        snackPosition: SnackPosition.TOP,
+    try {
+      final updatedBook = Book(
+        id: widget.book.id,
+        judul: _judulController.text.trim(),
+        harga: int.parse(_hargaController.text.replaceAll('.', '')),
+        jumlah: int.parse(_jumlahController.text),
+        tanggalMasuk: _tanggalMasukController.text,
+        volume: int.parse(_volumeController.text),
+        penulis: _penulisController.text.trim(),
+        penerbit: _penerbitController.text.trim(),
       );
-      Get.back(result: true);
-    } else {
+      
+      final result = await _bookService.updateBook(widget.book.id!, updatedBook);
+      
+      setState(() => _isLoading = false);
+      
+      if (result['success']) {
+        Get.snackbar(
+          'Buku Berhasil Diperbarui! ✅',
+          'Buku "${_judulController.text.trim()}" telah diperbarui',
+          backgroundColor: AppColors.success,
+          colorText: AppColors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          icon: const Icon(Icons.check_circle, color: Colors.white),
+          duration: const Duration(seconds: 3),
+        );
+        
+        // Delay sedikit agar user membaca pesan
+        await Future.delayed(const Duration(milliseconds: 1000));
+        
+        if (mounted) {
+          // ✅ PERBAIKAN UTAMA: Cukup Get.back()
+          // Karena DetailBookScreen sekarang menggunakan Stream,
+          // saat halaman ini ditutup, halaman Detail di belakangnya otomatis terupdate.
+          Get.back(); 
+        }
+      } else {
+        Get.snackbar(
+          'Gagal Memperbarui Buku ❌',
+          result['message'] ?? 'Terjadi kesalahan saat memperbarui buku',
+          backgroundColor: AppColors.error,
+          colorText: AppColors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          icon: const Icon(Icons.error_outline, color: Colors.white),
+          duration: const Duration(seconds: 4),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
       Get.snackbar(
-        'Error',
-        result['message'],
+        'Error ❌',
+        'Terjadi kesalahan: ${e.toString()}',
         backgroundColor: AppColors.error,
         colorText: AppColors.white,
         snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        icon: const Icon(Icons.error_outline, color: Colors.white),
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -140,6 +178,12 @@ class _EditBookScreenState extends State<EditBookScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Buku - Deef Books'),
+        leading: _isLoading
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Get.back(),
+            ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -152,21 +196,55 @@ class _EditBookScreenState extends State<EditBookScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.warning.withOpacity(0.1),
+                      AppColors.warning.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.warning.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.edit, color: AppColors.warning),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        'Anda sedang mengedit buku "${widget.book.judul}"',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mode Edit',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Mengedit: "${widget.book.judul}"',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -175,12 +253,12 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 24),
               
-              // Judul Buku
               CustomTextField(
                 controller: _judulController,
                 label: 'Judul Buku',
                 hint: 'Masukkan judul buku',
                 prefixIcon: Icons.book,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Judul buku');
@@ -191,12 +269,12 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 20),
               
-              // Penulis
               CustomTextField(
                 controller: _penulisController,
                 label: 'Penulis',
                 hint: 'Masukkan nama penulis',
                 prefixIcon: Icons.person,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Penulis');
@@ -207,12 +285,12 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 20),
               
-              // Penerbit
               CustomTextField(
                 controller: _penerbitController,
                 label: 'Penerbit',
                 hint: 'Masukkan nama penerbit',
                 prefixIcon: Icons.business,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Penerbit');
@@ -223,7 +301,6 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 20),
               
-              // Volume
               CustomTextField(
                 controller: _volumeController,
                 label: 'Volume',
@@ -231,6 +308,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
                 prefixIcon: Icons.format_list_numbered,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Volume');
@@ -241,13 +319,13 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 20),
               
-              // Harga
               CustomTextField(
                 controller: _hargaController,
                 label: 'Harga Satuan (Rp)',
                 hint: 'Masukkan harga',
                 prefixIcon: Icons.attach_money,
                 keyboardType: TextInputType.number,
+                enabled: !_isLoading,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   TextInputFormatter.withFunction((oldValue, newValue) {
@@ -272,7 +350,6 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 20),
               
-              // Jumlah
               CustomTextField(
                 controller: _jumlahController,
                 label: 'Jumlah Stok',
@@ -280,6 +357,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
                 prefixIcon: Icons.inventory_2,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Jumlah stok');
@@ -293,7 +371,6 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               const SizedBox(height: 20),
               
-              // Tanggal Masuk
               CustomTextField(
                 controller: _tanggalMasukController,
                 label: 'Tanggal Masuk',
@@ -302,6 +379,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
                 readOnly: true,
                 onTap: _selectDate,
                 suffixIcon: Icons.arrow_drop_down,
+                enabled: !_isLoading,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Tanggal masuk');
@@ -315,7 +393,10 @@ class _EditBookScreenState extends State<EditBookScreen> {
               // Update Button
               CustomButton(
                 text: 'Update Buku',
-                onPressed: _handleSubmit,
+                // ✅ Fix: Gunakan anonymous function
+                onPressed: () {
+                  if (!_isLoading) _handleSubmit();
+                }, 
                 isLoading: _isLoading,
                 icon: Icons.save,
               ),
@@ -325,6 +406,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
               // Cancel Button
               CustomButton(
                 text: 'Batal',
+                // ✅ Fix: Handle loading state pada cancel
                 onPressed: _isLoading ? () {} : () => Get.back(),
                 isOutlined: true,
                 icon: Icons.close,

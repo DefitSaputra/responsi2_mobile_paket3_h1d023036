@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../config/theme.dart';
@@ -19,13 +18,24 @@ class DetailBookScreen extends StatefulWidget {
 
 class _DetailBookScreenState extends State<DetailBookScreen> {
   final BookService _bookService = BookService();
+  
+  // Stream untuk mendengarkan perubahan realtime pada buku ini
+  late Stream<Book?> _bookStream;
   bool _isDeleting = false;
 
-  Future<void> _handleDelete() async {
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Inisialisasi stream berdasarkan ID buku
+    // Pastikan Anda sudah menambahkan getBookByIdStream di BookService seperti langkah sebelumnya
+    _bookStream = _bookService.getBookByIdStream(widget.book.id!);
+  }
+
+  Future<void> _handleDelete(int id) async {
     final confirm = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Konfirmasi Hapus'),
-        content: Text('Apakah Anda yakin ingin menghapus buku "${widget.book.judul}"?'),
+        content: const Text('Apakah Anda yakin ingin menghapus buku ini?'),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -45,9 +55,11 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
     if (confirm == true) {
       setState(() => _isDeleting = true);
       
-      final result = await _bookService.deleteBook(widget.book.id!);
+      final result = await _bookService.deleteBook(id);
       
-      setState(() => _isDeleting = false);
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
       
       if (result['success']) {
         Get.snackbar(
@@ -57,7 +69,8 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
           colorText: AppColors.white,
           snackPosition: SnackPosition.TOP,
         );
-        Get.back(result: true); // Kembali ke home dengan result true
+        // Kembali ke home
+        Get.back(); 
       } else {
         Get.snackbar(
           'Error',
@@ -72,233 +85,250 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Buku - Deef Books'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () async {
-              final result = await Get.to(() => EditBookScreen(book: widget.book));
-              if (result == true) {
-                Get.back(result: true); // Kembali dengan result true
-              }
-            },
-            tooltip: 'Edit',
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _isDeleting ? null : _handleDelete,
-            tooltip: 'Hapus',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Card dengan Gradient
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                  ],
-                ),
-              ),
-              child: Column(
-                children: [
-                  // Icon Buku
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.menu_book_rounded,
-                      size: 50,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Judul
-                  Text(
-                    widget.book.judul,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Volume Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Volume ${widget.book.volume}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    // ✅ Bungkus dengan StreamBuilder agar update otomatis
+    return StreamBuilder<Book?>(
+      stream: _bookStream,
+      initialData: widget.book, // Gunakan data awal agar tidak loading
+      builder: (context, snapshot) {
+        // Jika koneksi waiting tapi data sudah ada (dari initialData), pakai itu.
+        
+        // Handle jika data null (misal dihapus dari device lain saat kita melihat detail)
+        if (snapshot.hasData && snapshot.data == null) {
+           return Scaffold(
+             appBar: AppBar(title: const Text('Detail Buku')),
+             body: const Center(child: Text("Buku tidak ditemukan")),
+           );
+        }
+
+        // Ambil data buku terbaru (bisa dari cache awal atau stream update)
+        // Gunakan snapshot.data jika ada, jika tidak fallback ke widget.book
+        final book = snapshot.data ?? widget.book;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Detail Buku - Deef Books'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Get.back(),
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Informasi Buku
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Informasi Buku',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  _buildDetailItem(
-                    icon: Icons.person,
-                    label: 'Penulis',
-                    value: widget.book.penulis,
-                    color: AppColors.primary,
-                  ),
-                  
-                  _buildDetailItem(
-                    icon: Icons.business,
-                    label: 'Penerbit',
-                    value: widget.book.penerbit,
-                    color: AppColors.secondary,
-                  ),
-                  
-                  _buildDetailItem(
-                    icon: Icons.attach_money,
-                    label: 'Harga Satuan',
-                    value: Helpers.formatCurrency(widget.book.harga),
-                    color: AppColors.success,
-                  ),
-                  
-                  _buildDetailItem(
-                    icon: Icons.inventory_2,
-                    label: 'Jumlah Stok',
-                    value: '${widget.book.jumlah} buah',
-                    color: AppColors.info,
-                  ),
-                  
-                  _buildDetailItem(
-                    icon: Icons.calendar_today,
-                    label: 'Tanggal Masuk',
-                    value: Helpers.formatDate(widget.book.tanggalMasuk),
-                    color: AppColors.warning,
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Total Nilai Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.accent.withOpacity(0.8),
-                          AppColors.secondary.withOpacity(0.6),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.accent.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  // ✅ Navigasi saja, tidak perlu logic refresh manual
+                  // Saat edit disimpan, Stream akan otomatis mendeteksi perubahan
+                  Get.to(() => EditBookScreen(book: book));
+                },
+                tooltip: 'Edit',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: _isDeleting ? null : () => _handleDelete(book.id!),
+                tooltip: 'Hapus',
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primaryLight,
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Total Nilai Inventaris',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          Helpers.formatCurrency(widget.book.totalValue),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          size: 50,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        book.judul,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Volume ${book.volume}',
                           style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${Helpers.formatCurrency(widget.book.harga)} × ${widget.book.jumlah} buah',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.white.withOpacity(0.8),
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Informasi Buku',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      _buildDetailItem(
+                        icon: Icons.person,
+                        label: 'Penulis',
+                        value: book.penulis,
+                        color: AppColors.primary,
+                      ),
+                      
+                      _buildDetailItem(
+                        icon: Icons.business,
+                        label: 'Penerbit',
+                        value: book.penerbit,
+                        color: AppColors.secondary,
+                      ),
+                      
+                      _buildDetailItem(
+                        icon: Icons.attach_money,
+                        label: 'Harga Satuan',
+                        value: Helpers.formatCurrency(book.harga),
+                        color: AppColors.success,
+                      ),
+                      
+                      _buildDetailItem(
+                        icon: Icons.inventory_2,
+                        label: 'Jumlah Stok',
+                        value: '${book.jumlah} buah',
+                        color: AppColors.info,
+                      ),
+                      
+                      _buildDetailItem(
+                        icon: Icons.calendar_today,
+                        label: 'Tanggal Masuk',
+                        value: Helpers.formatDate(book.tanggalMasuk),
+                        color: AppColors.warning,
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Total Nilai Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.accent.withOpacity(0.8),
+                              AppColors.secondary.withOpacity(0.6),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accent.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Total Nilai Inventaris',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              Helpers.formatCurrency(book.totalValue),
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${Helpers.formatCurrency(book.harga)} × ${book.jumlah} buah',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.white.withOpacity(0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      
+                      // Action Buttons
+                      CustomButton(
+                        text: 'Edit Buku',
+                        onPressed: () {
+                          Get.to(() => EditBookScreen(book: book));
+                        },
+                        icon: Icons.edit,
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      CustomButton(
+                        text: 'Hapus Buku',
+                        onPressed: () {
+                          if (!_isDeleting) _handleDelete(book.id!);
+                        },
+                        isLoading: _isDeleting,
+                        backgroundColor: AppColors.error,
+                        icon: Icons.delete,
+                      ),
+                      
+                      const SizedBox(height: 32),
+                    ],
                   ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Action Buttons
-                  CustomButton(
-                    text: 'Edit Buku',
-                    onPressed: () async {
-                      final result = await Get.to(() => EditBookScreen(book: widget.book));
-                      if (result == true) {
-                        Get.back(result: true);
-                      }
-                    },
-                    icon: Icons.edit,
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  CustomButton(
-                    text: 'Hapus Buku',
-                    onPressed: _handleDelete,
-                    isLoading: _isDeleting,
-                    backgroundColor: AppColors.error,
-                    icon: Icons.delete,
-                  ),
-                  
-                  const SizedBox(height: 32),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
