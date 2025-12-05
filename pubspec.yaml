@@ -37,6 +37,11 @@ dependencies:
   supabase_flutter: ^2.10.3
   google_fonts: ^6.3.3
   intl: ^0.20.2
+  get: ^4.6.6
+  flutter_svg: ^2.0.9
+  flutter_spinkit: ^5.2.0
+  email_validator: ^2.1.17
+  iconsax: ^0.0.8
 
 dev_dependencies:
   flutter_test:
