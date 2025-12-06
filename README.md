@@ -85,9 +85,9 @@ Tabel ini digunakan untuk menyimpan seluruh data inventaris perpustakaan.
 | Nama Kolom | Tipe Data | Keterangan |
 | :--- | :--- | :--- |
 | `id` | `int8` | *Primary Key*, Auto Increment. Identitas unik buku. |
-| `judul` | `text` | Judul lengkap buku. |
-| `penulis` | `text` | Nama penulis buku. |
-| `penerbit` | `text` | Nama penerbit buku. |
+| `judul` | `string` | Judul lengkap buku. |
+| `penulis` | `string` | Nama penulis buku. |
+| `penerbit` | `string` | Nama penerbit buku. |
 | `harga` | `int8` | Harga buku dalam mata uang Rupiah. |
 | `jumlah` | `int8` | Stok buku yang tersedia di perpustakaan. |
 | `volume` | `int8` | Informasi volume/jilid buku. |
