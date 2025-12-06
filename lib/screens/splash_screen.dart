@@ -56,11 +56,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     await Future.delayed(const Duration(milliseconds: 2500));
     
     // Check if user is logged in
-    if (_authService.isLoggedIn) {
-      // Navigate to Home
+    if (_authService.isLoggedIn) {      
       Get.off(() => const HomeScreen(), transition: Transition.fadeIn);
-    } else {
-      // Navigate to Login
+    } else {     
       Get.off(() => const LoginScreen(), transition: Transition.fadeIn);
     }
   }

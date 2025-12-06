@@ -18,16 +18,13 @@ class DetailBookScreen extends StatefulWidget {
 
 class _DetailBookScreenState extends State<DetailBookScreen> {
   final BookService _bookService = BookService();
-  
-  // Stream untuk mendengarkan perubahan realtime pada buku ini
+    
   late Stream<Book?> _bookStream;
   bool _isDeleting = false;
 
   @override
   void initState() {
-    super.initState();
-    // ✅ Inisialisasi stream berdasarkan ID buku
-    // Pastikan Anda sudah menambahkan getBookByIdStream di BookService seperti langkah sebelumnya
+    super.initState();    
     _bookStream = _bookService.getBookByIdStream(widget.book.id!);
   }
 
@@ -45,6 +42,7 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
             onPressed: () => Get.back(result: true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Hapus'),
           ),
@@ -68,8 +66,9 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
           backgroundColor: AppColors.success,
           colorText: AppColors.white,
           snackPosition: SnackPosition.TOP,
-        );
-        // Kembali ke home
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+        );        
         Get.back(); 
       } else {
         Get.snackbar(
@@ -78,6 +77,8 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
           backgroundColor: AppColors.error,
           colorText: AppColors.white,
           snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     }
@@ -85,23 +86,30 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Bungkus dengan StreamBuilder agar update otomatis
     return StreamBuilder<Book?>(
       stream: _bookStream,
-      initialData: widget.book, // Gunakan data awal agar tidak loading
-      builder: (context, snapshot) {
-        // Jika koneksi waiting tapi data sudah ada (dari initialData), pakai itu.
-        
-        // Handle jika data null (misal dihapus dari device lain saat kita melihat detail)
+      initialData: widget.book, 
+      builder: (context, snapshot) {       
         if (snapshot.hasData && snapshot.data == null) {
            return Scaffold(
-             appBar: AppBar(title: const Text('Detail Buku')),
-             body: const Center(child: Text("Buku tidak ditemukan")),
+             backgroundColor: AppColors.background,
+             appBar: AppBar(
+               title: const Text('Detail Buku'),
+               // ✅ Tetap kasih tombol back biar user tidak terjebak
+               leading: IconButton(
+                 icon: const Icon(Icons.arrow_back),
+                 onPressed: () => Get.back(),
+               ),
+             ),
+             body: const Center(
+               child: Text(
+                 "Buku tidak ditemukan", 
+                 style: TextStyle(color: AppColors.textSecondary),
+               )
+             ),
            );
         }
-
-        // Ambil data buku terbaru (bisa dari cache awal atau stream update)
-        // Gunakan snapshot.data jika ada, jika tidak fallback ke widget.book
+      
         final book = snapshot.data ?? widget.book;
 
         return Scaffold(
@@ -115,8 +123,7 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () {
-                  // ✅ Navigasi saja, tidak perlu logic refresh manual
-                  // Saat edit disimpan, Stream akan otomatis mendeteksi perubahan
+                  // ✅ Navigasi ke Edit
                   Get.to(() => EditBookScreen(book: book));
                 },
                 tooltip: 'Edit',
@@ -131,12 +138,11 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
           body: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Card
+              children: [               
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration( 
                     gradient: LinearGradient(
                       colors: [
                         AppColors.primary,
@@ -239,7 +245,7 @@ class _DetailBookScreenState extends State<DetailBookScreen> {
                       
                       _buildDetailItem(
                         icon: Icons.calendar_today,
-                        label: 'Tanggal Masuk',
+                        label: 'Tanggal Masuk',                       
                         value: Helpers.formatDate(book.tanggalMasuk),
                         color: AppColors.warning,
                       ),

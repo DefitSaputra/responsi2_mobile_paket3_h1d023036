@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import '../models/book_model.dart';
 import '../config/theme.dart';
@@ -193,7 +192,7 @@ class BookCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          Helpers.formatDate(book.tanggalMasuk),
+                          book.tanggalMasuk, 
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,

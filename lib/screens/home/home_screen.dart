@@ -8,7 +8,6 @@ import '../../widgets/book_card.dart';
 import '../../widgets/loading_indicator.dart' hide EmptyState;
 import '../../widgets/empty_state.dart';
 import '../../utils/helpers.dart';
-import '../../utils/constants.dart';
 import '../auth/login_screen.dart';
 import '../book/add_book_screen.dart';
 import '../book/edit_book_screen.dart';
@@ -24,24 +23,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final BookService _bookService = BookService();
-  
-  // Stream untuk mendengarkan perubahan data secara langsung
+    
   late Stream<List<Book>> _booksStream;
   String _searchQuery = '';
   
   @override
   void initState() {
-    super.initState();
-    // Inisialisasi stream satu kali saat halaman dibuka
-    // Pastikan getBooksStream sudah ada di BookService
+    super.initState();    
     _booksStream = _bookService.getBooksStream();
   }
 
   void _searchBooks(String query) {
     setState(() {
-      _searchQuery = query;
-      // Tidak perlu panggil fungsi filter manual, 
-      // setState akan memicu build ulang dan StreamBuilder akan memfilter ulang datanya
+      _searchQuery = query;     
     });
   }
 
@@ -66,9 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    if (confirm == true) {
-      // Tidak perlu loading indicator full screen karena stream akan update UI otomatis
-      // Feedback cukup dengan snackbar
+    if (confirm == true) {     
       final result = await _bookService.deleteBook(book.id!);
       
       if (result['success']) {
@@ -78,8 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: AppColors.success,
           colorText: AppColors.white,
           snackPosition: SnackPosition.TOP,
-        );
-        // TIDAK PERLU _refreshData(), Stream otomatis update
+        );        
       } else {
         Get.snackbar(
           'Error',
@@ -131,17 +122,14 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Logout',
           ),
         ],
-      ),
-      // ✅ Menggunakan StreamBuilder untuk Realtime Updates
+      ),    
       body: StreamBuilder<List<Book>>(
         stream: _booksStream,
-        builder: (context, snapshot) {
-          // 1. Handle Loading Awal
+        builder: (context, snapshot) {         
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: LoadingIndicator(message: 'Menghubungkan data...'));
           }
-
-          // 2. Handle Error
+         
           if (snapshot.hasError) {
             return Center(
               child: EmptyState(
@@ -151,11 +139,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           }
-
-          // 3. Ambil Data
+        
           final allBooks = snapshot.data ?? [];
-          
-          // Filter data berdasarkan search query
+                   
           final filteredBooks = _searchQuery.isEmpty 
               ? allBooks 
               : allBooks.where((book) {
@@ -164,9 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                          book.penulis.toLowerCase().contains(query) ||
                          book.penerbit.toLowerCase().contains(query);
                 }).toList();
-
-          // 4. Hitung Statistik secara Realtime (Client Side Calculation)
-          // Ini lebih efisien daripada request terpisah ke DB
+         
           final totalBooks = allBooks.length;
           final totalStock = allBooks.fold<int>(0, (sum, item) => sum + item.jumlah);
           final totalValue = allBooks.fold<int>(0, (sum, item) => sum + (item.harga * item.jumlah));
@@ -269,9 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final book = filteredBooks[index];
                           return BookCard(
                             book: book,
-                            onTap: () {
-                              // Navigasi ke Detail
-                              // Tidak perlu await result, karena data realtime
+                            onTap: () {                             
                               Get.to(() => DetailBookScreen(book: book));
                             },
                             onEdit: () {
@@ -288,8 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigasi ke Add Book
+        onPressed: () {         
           Get.to(() => const AddBookScreen());
         },
         icon: const Icon(Icons.add),

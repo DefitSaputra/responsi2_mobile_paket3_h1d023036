@@ -5,18 +5,14 @@ import '../config/supabase_config.dart';
 class BookService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  // ==================== REALTIME STREAMS ====================
-  
-  // 1. Stream Semua Buku (Untuk Home)
   Stream<List<Book>> getBooksStream() {
     return _supabase
         .from(SupabaseConfig.booksTable)
-        .stream(primaryKey: ['id']) // Primary key tabel Anda
+        .stream(primaryKey: ['id'])
         .order('id', ascending: false)
         .map((data) => data.map((json) => Book.fromJson(json)).toList());
   }
-
-  // 2. Stream Satu Buku (Untuk Detail) - ✅ INI YANG SEBELUMNYA HILANG
+  
   Stream<Book?> getBookByIdStream(int id) {
     return _supabase
         .from(SupabaseConfig.booksTable)
@@ -26,11 +22,10 @@ class BookService {
           if (data.isNotEmpty) {
             return Book.fromJson(data.first);
           }
-          return null; // Jika data kosong (misal dihapus)
+          return null; 
         });
   }
 
-  // ==================== CRUD OPERATIONS ====================
   
   // CREATE
   Future<Map<String, dynamic>> createBook(Book book) async {
@@ -51,7 +46,7 @@ class BookService {
     }
   }
 
-  // READ (Tetap ada untuk kebutuhan non-stream jika perlu)
+  // READ
   Future<Map<String, dynamic>> getAllBooks() async {
     try {
       final response = await _supabase
@@ -120,8 +115,7 @@ class BookService {
   }
 
   Future<int> getTotalStock() async {
-    try {
-      // Menggunakan RPC (Stored Procedure) lebih efisien, tapi manual loop oke untuk skala kecil
+    try {      
       final response = await _supabase.from(SupabaseConfig.booksTable).select('jumlah');
       int total = 0;
       for (var item in response) total += (item['jumlah'] as int?) ?? 0;

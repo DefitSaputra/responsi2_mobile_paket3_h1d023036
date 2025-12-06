@@ -43,7 +43,7 @@ class LoadingIndicator extends StatelessWidget {
   }
 }
 
-// Loading Overlay (Full Screen)
+// Loading Overlay
 class LoadingOverlay extends StatelessWidget {
   final String? message;
   final bool isLoading;
@@ -93,7 +93,7 @@ class LoadingOverlay extends StatelessWidget {
   }
 }
 
-// Small Loading (untuk button, dll)
+// Small Loading 
 class SmallLoading extends StatelessWidget {
   final Color? color;
   final double size;
@@ -262,7 +262,6 @@ class ErrorState extends StatelessWidget {
   }
 }
 
-// Shimmer Loading (untuk skeleton loading)
 class ShimmerLoading extends StatelessWidget {
   final double width;
   final double height;

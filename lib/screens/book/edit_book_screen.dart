@@ -9,7 +9,6 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
-// import 'detail_book_screen.dart'; // ❌ Tidak perlu import ini lagi karena kita cuma akan Get.back()
 
 class EditBookScreen extends StatefulWidget {
   final Book book;
@@ -39,7 +38,6 @@ class _EditBookScreenState extends State<EditBookScreen> {
   void initState() {
     super.initState();
     
-    // Initialize controllers dengan data buku yang ada
     _judulController = TextEditingController(text: widget.book.judul);
     _hargaController = TextEditingController(
       text: NumberFormat('#,###', 'id_ID')
@@ -68,7 +66,6 @@ class _EditBookScreenState extends State<EditBookScreen> {
     super.dispose();
   }
 
-  // ✅ Wrapper untuk date picker
   void _selectDate() {
     if (_isLoading) return; 
     _showDatePicker();
@@ -135,13 +132,9 @@ class _EditBookScreenState extends State<EditBookScreen> {
           duration: const Duration(seconds: 3),
         );
         
-        // Delay sedikit agar user membaca pesan
         await Future.delayed(const Duration(milliseconds: 1000));
         
-        if (mounted) {
-          // ✅ PERBAIKAN UTAMA: Cukup Get.back()
-          // Karena DetailBookScreen sekarang menggunakan Stream,
-          // saat halaman ini ditutup, halaman Detail di belakangnya otomatis terupdate.
+        if (mounted) {          
           Get.back(); 
         }
       } else {
@@ -405,8 +398,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
               
               // Cancel Button
               CustomButton(
-                text: 'Batal',
-                // ✅ Fix: Handle loading state pada cancel
+                text: 'Batal',               
                 onPressed: _isLoading ? () {} : () => Get.back(),
                 isOutlined: true,
                 icon: Icons.close,

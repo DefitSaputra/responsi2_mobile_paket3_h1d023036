@@ -3,7 +3,6 @@ import '../config/theme.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  // ✅ UBAH: Jadi nullable (tanda tanya ?) agar bisa disabled dari luar
   final VoidCallback? onPressed; 
   final bool isLoading;
   final bool isOutlined;
@@ -17,7 +16,7 @@ class CustomButton extends StatelessWidget {
   const CustomButton({
     super.key,
     required this.text,
-    required this.onPressed, // Tetap required, tapi isinya boleh null
+    required this.onPressed, 
     this.isLoading = false,
     this.isOutlined = false,
     this.backgroundColor,
@@ -30,7 +29,6 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ LOGIC: Jika loading, paksa null. Jika tidak, gunakan nilai asli (bisa fungsi, bisa null)
     final effectiveOnPressed = isLoading ? null : onPressed;
 
     if (isOutlined) {
@@ -89,8 +87,6 @@ class CustomButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor ?? AppColors.primary,
           foregroundColor: textColor ?? AppColors.white,
-          // Handle disabled color secara otomatis oleh ElevatedButton, 
-          // atau custom disini jika perlu
           disabledBackgroundColor: Colors.grey.shade300,
           disabledForegroundColor: Colors.grey.shade600,
           shape: RoundedRectangleBorder(
@@ -128,7 +124,6 @@ class CustomButton extends StatelessWidget {
   }
 }
 
-// Icon Button dengan loading state
 class CustomIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed; // ✅ UBAH: Jadi nullable
@@ -155,7 +150,6 @@ class CustomIconButton extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        // Jika disabled, ganti warna background jadi abu-abu
         color: effectiveOnPressed == null 
             ? Colors.grey.shade300 
             : (backgroundColor ?? AppColors.primary),
@@ -180,7 +174,6 @@ class CustomIconButton extends StatelessWidget {
                   )
                 : Icon(
                     icon,
-                    // Jika disabled, warna icon jadi agak pudar
                     color: effectiveOnPressed == null 
                         ? Colors.grey.shade500 
                         : (iconColor ?? AppColors.white),

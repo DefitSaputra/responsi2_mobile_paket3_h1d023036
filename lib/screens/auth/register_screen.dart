@@ -101,18 +101,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 CustomButton(
                   text: 'Login Sekarang',
                   onPressed: () {
-                    Get.back(); // Tutup Dialog
-                    Get.back(); // Kembali ke halaman Login (Pop screen register)
+                    Get.back(); 
+                    Get.back(); 
                   },
                   height: 45,
                 ),
               ],
             ),
           ),
-          barrierDismissible: false, // User tidak bisa menutup dialog dengan tap di luar
+          barrierDismissible: false, 
         );
-      } else {
-        // ❌ ERROR: Show error snackbar
+      } else {       
         Get.snackbar(
           'Registrasi Gagal ❌',
           result['message'] ?? 'Terjadi kesalahan saat mendaftar',
@@ -128,9 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      
-      // ❌ CATCH ERROR
+      setState(() => _isLoading = false);           
       Get.snackbar(
         'Error ❌',
         'Terjadi kesalahan: ${e.toString()}',
@@ -151,8 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Registrasi - Deef Books'),
-        elevation: 0,
-        // ✅ Disable back button saat loading
+        elevation: 0,        
         leading: _isLoading 
           ? null 
           : IconButton(
@@ -197,7 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Masukkan nama lengkap Anda',
                   prefixIcon: Icons.person_outline,
                   keyboardType: TextInputType.name,
-                  enabled: !_isLoading, // ✅ Disable saat loading
+                  enabled: !_isLoading, 
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppConstants.fieldRequired('Nama lengkap');
@@ -218,7 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Masukkan email Anda',
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  enabled: !_isLoading, // ✅ Disable saat loading
+                  enabled: !_isLoading, 
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppConstants.fieldRequired('Email');
@@ -239,7 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Masukkan password (min. 6 karakter)',
                   prefixIcon: Icons.lock_outline,
                   obscureText: true,
-                  enabled: !_isLoading, // ✅ Disable saat loading
+                  enabled: !_isLoading, 
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppConstants.fieldRequired('Password');
@@ -260,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Masukkan ulang password Anda',
                   prefixIcon: Icons.lock_outline,
                   obscureText: true,
-                  enabled: !_isLoading, // ✅ Disable saat loading
+                  enabled: !_isLoading, 
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppConstants.fieldRequired('Konfirmasi password');
@@ -276,8 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 // Register Button
                 CustomButton(
-                  text: 'Daftar Sekarang',
-                  // PERBAIKAN DI SINI: Menggunakan closure () { ... }
+                  text: 'Daftar Sekarang',                 
                   onPressed: _isLoading 
                       ? () {} 
                       : () {

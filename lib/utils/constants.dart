@@ -1,5 +1,3 @@
-
-
 class AppConstants {
   // App Info
   static const String appName = 'Responsi 2 Mobile Paket 3 H1D023036';

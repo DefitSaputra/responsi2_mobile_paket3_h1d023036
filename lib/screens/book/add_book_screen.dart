@@ -34,8 +34,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
 
   @override
   void initState() {
-    super.initState();
-    // Set tanggal hari ini sebagai default
+    super.initState();    
     _selectedDate = DateTime.now();
     _tanggalMasukController.text = Helpers.getCurrentDate();
   }
@@ -51,16 +50,12 @@ class _AddBookScreenState extends State<AddBookScreen> {
     _penerbitController.dispose();
     super.dispose();
   }
-
-  // ✅ Wrapper untuk date picker (synchronous)
+  
   void _selectDate() {
-    if (_isLoading) return; // Prevent saat loading
-    
-    // Jalankan async operation tanpa await
+    if (_isLoading) return;    
     _showDatePicker();
   }
-  
-  // ✅ Actual async function
+    
   Future<void> _showDatePicker() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -108,8 +103,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
       
       setState(() => _isLoading = false);
       
-      if (result['success']) {
-        // ✅ SUCCESS: Show success snackbar with book title
+      if (result['success']) {       
         Get.snackbar(
           'Buku Berhasil Ditambahkan! ✅',
           'Buku "${_judulController.text.trim()}" telah ditambahkan ke inventaris',
@@ -123,16 +117,13 @@ class _AddBookScreenState extends State<AddBookScreen> {
           isDismissible: true,
           dismissDirection: DismissDirection.horizontal,
         );
-        
-        // ✅ DELAY sebelum navigate agar user baca snackbar
+             
         await Future.delayed(const Duration(milliseconds: 1500));
-        
-        // ✅ Navigate back dengan result true
+              
         if (mounted) {
           Get.back(result: true);
         }
-      } else {
-        // ❌ ERROR: Show error snackbar
+      } else {        
         Get.snackbar(
           'Gagal Menambahkan Buku ❌',
           result['message'] ?? 'Terjadi kesalahan saat menambahkan buku',
@@ -218,7 +209,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
                 label: 'Judul Buku',
                 hint: 'Masukkan judul buku',
                 prefixIcon: Icons.book,
-                enabled: !_isLoading, // ✅ Disable saat loading
+                enabled: !_isLoading, 
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return AppConstants.fieldRequired('Judul buku');
@@ -358,9 +349,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
               
               // Submit Button
               CustomButton(
-                text: 'Simpan Buku',
-                // PERBAIKAN: Selalu kembalikan fungsi yang valid (tidak null).
-                // Cek _isLoading di dalam fungsi untuk mencegah eksekusi ganda.
+                text: 'Simpan Buku',               
                 onPressed: () {
                   if (_isLoading) return;
                   _handleSubmit();
@@ -373,8 +362,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
               
               // Cancel Button
               CustomButton(
-                text: 'Batal',
-                // Ini aman karena kedua cabang mengembalikan void Function()
+                text: 'Batal',            
                 onPressed: _isLoading ? () {} : () => Get.back(), 
                 isOutlined: true,
                 icon: Icons.close,
